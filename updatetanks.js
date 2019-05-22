@@ -1,16 +1,7 @@
 var fse = require('fs-extra');
 const path = require('path');
 
-var originalTanksToKeep = [
-    "dummy",
-    "crawler",
-    "crazy",
-    "chicken",
-    "dodge",
-    "sniper",
-    "kamikaze",
-    "jamro"
-];
+builtInTanksToAdd = [];
 
 const consoleColors = {
     Reset: "\x1b[0m",
@@ -20,17 +11,42 @@ const consoleColors = {
     Green: "\x1b[32m"
 };
 
+var SETTINGS = {}
+SETTINGS.copyExampleTanks = false;
 var pathToTanks = 'node_modules/jsbattle/dist/public/tanks';
+var pathToExampleTanks = 'exampleTanks';
 var tankRegex = /(.+?)\.tank\.js$/;
+
+// Arguments
+console.log("To apply arguments to npm use -- before the arguments")
+console.log("Example : npm updatetanks -- addExampleTanks")
+process.argv.forEach(function (val, index, array) {
+    console.log(index + ': ' + val);
+    processInputArguments(val);
+  });
 
 const dir = fse.readdirSync(pathToTanks);
 const tankFileNames = dir.filter(str => tankRegex.test(str) )
 
 console.log({tankFileNames})
 
+// Copy example Tanks
+if (SETTINGS.copyExampleTanks) 
+{
+    const newTanks = fse.readdirSync('exampleTanks');
+    builtInTanksToAdd = builtInTanksToAdd.concat(newTanks);
+    newTanks.forEach(newTank => {
+        const source = path.join('exampleTanks', newTank);
+        const dest = path.join(pathToTanks, newTank);
+        console.log(consoleColors.Cyan, `Copying: ${source} -> ${dest}`, consoleColors.Reset);
+        fse.copySync(source, dest);
+    }) 
+}
+
+
 const filesToMove = tankFileNames.filter(tankFileName => {
     const tankName = tankRegex.exec(tankFileName)[1];
-    return !originalTanksToKeep.some(originalName => originalName === tankName);
+    return !builtInTanksToAdd.some(originalName => originalName === tankName);
 });
 
 console.log({filesToMove});
@@ -72,3 +88,11 @@ console.log({updatedTankNames});
 fse.outputJSONSync(path.join(pathToTanks, 'index.json'), updatedTankNames);
 
 console.log(consoleColors.Green, '\nDone!', consoleColors.Reset);
+
+function processInputArguments(arg) 
+{
+    if (arg.toUpperCase() == "addExampleTanks".toUpperCase()) 
+    {   
+       SETTINGS.copyExampleTanks = true;
+    }
+}
